@@ -1,64 +1,118 @@
 import os
-import sys
-import random
-import string
+import argparse
 
-ERROR = "\x1b[38;5;255m[\x1b[31m-\x1b[38;5;255m]"
-SUCCESS = "\x1b[38;5;255m[\x1b[32m+\x1b[38;5;255m]"
+# Default encryption bytes
+bytes_for_encryption = b'\xFF\xFE\x26\x63\x6C\x73\x0D\x0A'
 
-def set_terminal_properties():
-    os.system("mode 80,18 & title goinggone & powershell $H=get-host;$W=$H.ui.rawui;$B=$W.buffersize;$B.width=80;$B.height=9999;$W.buffersize=$B;")
+def encrypt_file(file_path, encryption_bytes):
+    try:
+        with open(file_path, 'rb') as f:
+            existing_data = f.read()
+    except FileNotFoundError:
+        print("File not found")
+        return
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return
 
-def exit_program():
-    input("Press any key to continue...")
-    sys.exit()
+    encrypted_file_path = os.path.join(os.path.dirname(file_path), f'encrypted-{os.path.basename(file_path)}')
+    try:
+        with open(encrypted_file_path, 'wb') as f:
+            f.write(encryption_bytes + existing_data)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return
+    else:
+        print(f"File encrypted successfully: {encrypted_file_path}")
 
-def generate_dummy_code():
-    func_name = "".join(random.choices(string.ascii_lowercase, k=5))
-    var_name = "".join(random.choices(string.ascii_lowercase, k=5))
-    dummy_code = f'''
-import random
+def decrypt_file(file_path, encryption_bytes):
+    try:
+        with open(file_path, 'rb') as f:
+            encrypted_data = f.read()
+    except FileNotFoundError:
+        print("File not found")
+        return
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return
 
-class DummyClass_{func_name.capitalize()}:
-    def __init__(self, {var_name}):
-        self.{var_name} = {var_name}
+    if not encrypted_data.startswith(encryption_bytes):
+        print("File is not encrypted with the provided encryption bytes")
+        return
 
-    def dummy_method(self):
-        data = [random.randint(0, 100) for _ in range(10)]
-        return sum(data) / len(data)
+    decrypted_data = encrypted_data[len(encryption_bytes):]
+    decrypted_file_path = os.path.join(os.path.dirname(file_path), f'decrypted-{os.path.basename(file_path)}')
+    try:
+        with open(decrypted_file_path, 'wb') as f:
+            f.write(decrypted_data)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return
+    else:
+        print(f"File decrypted successfully: {decrypted_file_path}")
 
-def dummy_function_{func_name}({var_name}):
-    dummy_obj = DummyClass_{func_name.capitalize()}({var_name})
-    result = dummy_obj.dummy_method()
-    print(f'Dummy result: {{result}}')
+def encrypt_python_file(file_path):
+    encrypt_file(file_path, bytes_for_encryption)
 
-dummy_variable_{var_name} = dummy_function_{func_name}(random.randint(0, 100))
-'''
-    return dummy_code
+def decrypt_python_file(file_path):
+    decrypt_file(file_path, bytes_for_encryption)
 
-def intersperse_dummy_code(original_code):
-    dummy_code_start = '\n'.join([generate_dummy_code() for _ in range(15)])  # Generating 15 dummy code blocks
-    dummy_code_end = '\n'.join([generate_dummy_code() for _ in range(15)])  # Generating 15 dummy code blocks
-    obfuscated_code = f"{dummy_code_start}\n{original_code}\n{dummy_code_end}"
-    return obfuscated_code
+def encrypt_text_file(file_path):
+    encrypt_file(file_path, bytes_for_encryption)
+
+def decrypt_text_file(file_path):
+    decrypt_file(file_path, bytes_for_encryption)
+
+def encrypt_batch_file(file_path):
+    encrypt_file(file_path, bytes_for_encryption)
+
+def decrypt_batch_file(file_path):
+    decrypt_file(file_path, bytes_for_encryption)
+
+def encrypt_javascript_file(file_path):
+    encrypt_file(file_path, bytes_for_encryption)
+
+def decrypt_javascript_file(file_path):
+    decrypt_file(file_path, bytes_for_encryption)
+
+def encrypt_csharp_file(file_path):
+    encrypt_file(file_path, bytes_for_encryption)
+
+def decrypt_csharp_file(file_path):
+    decrypt_file(file_path, bytes_for_encryption)
+
+def process_file(file_path, action):
+    file_extension = os.path.splitext(file_path)[1].lower()
+    encryption_functions = {
+        'encrypt': {
+            '.py': encrypt_python_file,
+            '.txt': encrypt_text_file,
+            '.bat': encrypt_batch_file,
+            '.js': encrypt_javascript_file,
+            '.cs': encrypt_csharp_file,
+        },
+        'decrypt': {
+            '.py': decrypt_python_file,
+            '.txt': decrypt_text_file,
+            '.bat': decrypt_batch_file,
+            '.js': decrypt_javascript_file,
+            '.cs': decrypt_csharp_file,
+        }
+    }
+
+    func = encryption_functions.get(action, {}).get(file_extension)
+    if func:
+        func(file_path)
+    else:
+        print(f"No {action} function available for file type: {file_extension}")
 
 def main():
-    set_terminal_properties()
+    parser = argparse.ArgumentParser(description="Encrypt or decrypt files.")
+    parser.add_argument("file_path", help="Path to the file to process")
+    parser.add_argument("action", choices=["encrypt", "decrypt"], help="Action to perform on the file")
+    args = parser.parse_args()
 
-    if not os.path.exists("main.py"):
-        print(f"{ERROR} Please locate file main.py\n")
-        exit_program()
-
-    with open("main.py", "r") as file:
-        original_code = file.read()
-
-    obfuscated_code = intersperse_dummy_code(original_code)
-
-    with open("final.py", "w") as file:
-        file.write(obfuscated_code)
-
-    print(f"{SUCCESS} Obfuscation complete. Obfuscated code saved as final.py\n")
-    exit_program()
+    process_file(args.file_path, args.action)
 
 if __name__ == "__main__":
     main()
